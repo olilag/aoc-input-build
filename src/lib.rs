@@ -1,53 +1,61 @@
-use std::{collections::HashSet, fs, path::PathBuf};
+use std::{collections::HashSet, fs, path::PathBuf, sync::LazyLock};
 
 use regex::Regex;
-use reqwest::{
-    blocking::Client,
-    header::{COOKIE, HeaderMap},
-};
+
+use crate::error::{Error, cargo_error};
 
 const DOWNLOAD_DIR_NAME: &str = "input";
 const AOC_URL: &str = "https://adventofcode.com";
+// FIXME: add github url
+const AOC_USER_AGENT: &str = "input downloader by oliver.oli.lago@gmail.com";
 
-fn list_days(root_dir: &str) -> Vec<String> {
+mod error;
+
+fn list_days(root_dir: &str) -> Result<impl Iterator<Item = String>, Error> {
     let mut src_dir = PathBuf::from(root_dir);
     src_dir.push("src");
 
-    let day_regex = Regex::new(r"^day[0-9][0-9]$").unwrap();
+    static DAY_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^day[0-9][0-9]$").unwrap());
 
-    src_dir
+    Ok(src_dir
         .read_dir()
-        .expect("Failed to read src")
+        .map_err(|e| Error::IO(src_dir.to_string_lossy().to_string(), e))?
         .flatten()
         .flat_map(|e| e.path().file_stem().map(|x| x.to_os_string()))
         .flat_map(|name| name.into_string())
-        .filter(|name| day_regex.is_match(name))
-        .collect()
+        .filter(|name| DAY_REGEX.is_match(name)))
 }
 
-fn fetch_input(client: &Client, year: u16, day: &str) -> Result<String, reqwest::Error> {
-    let n = day[3..].parse::<u8>().unwrap();
-    let url = format!("{AOC_URL}/{year}/day/{n}/input");
+fn fetch_input(session_cookie: &str, year: u16, day: u8) -> Result<String, Error> {
+    let url = format!("{AOC_URL}/{year}/day/{day}/input");
 
-    let resp = client.get(url).send()?;
-    resp.error_for_status_ref()?;
-    resp.text()
+    let mut resp = ureq::get(&url)
+        .header("User-Agent", AOC_USER_AGENT)
+        .header("Cookie", session_cookie)
+        .call()
+        .map_err(|e| Error::Request(url.clone(), e))?
+        .into_body();
+    resp.read_to_string().map_err(|e| Error::Request(url, e))
 }
 
-pub fn download_inputs(root_dir: &str, token: &str, year: u16) {
+pub fn download_inputs(root_dir: &str, token: &str, year: u16) -> Option<()> {
     println!("cargo::rerun-if-changed=src");
-    let days = list_days(root_dir);
+    let res = list_days(root_dir);
+    let days = cargo_error(res)?;
 
     let mut download_dir = PathBuf::from(root_dir);
     download_dir.push(DOWNLOAD_DIR_NAME);
 
     if !download_dir.exists() {
-        fs::create_dir(&download_dir).expect("Failed to create dir");
+        let res = fs::create_dir(&download_dir)
+            .map_err(|e| Error::IO(download_dir.to_string_lossy().to_string(), e));
+        cargo_error(res)?;
     }
 
-    let cached: HashSet<String> = download_dir
+    let res = download_dir
         .read_dir()
-        .expect("Failed to read download director")
+        .map_err(|e| Error::IO(download_dir.to_string_lossy().to_string(), e));
+    let cached: HashSet<String> = cargo_error(res)?
         .flatten()
         .flat_map(|e| e.path().file_stem().map(|x| x.to_os_string()))
         .flat_map(|name| name.into_string())
@@ -55,18 +63,18 @@ pub fn download_inputs(root_dir: &str, token: &str, year: u16) {
 
     let formatted_token = format!("session={token}");
 
-    let mut headers = HeaderMap::new();
-    headers.insert(COOKIE, formatted_token.parse().unwrap());
-    let client = Client::builder()
-        .user_agent("input downloader by oliver.oli.lago@gmail.com")
-        .default_headers(headers)
-        .build()
-        .unwrap();
-
     for day in days {
         if !cached.contains(&day) {
-            let inp = fetch_input(&client, year, &day).expect("Download failed");
-            fs::write(download_dir.join(format!("{day}.txt")), inp).expect("Write to file failed");
+            let n = day[3..].parse::<u8>().unwrap();
+            let res = fetch_input(&formatted_token, year, n);
+            if let Some(inp) = cargo_error(res) {
+                let file = download_dir.join(format!("{day}.txt"));
+                let res = fs::write(&file, inp)
+                    .map_err(|e| Error::IO(file.to_string_lossy().to_string(), e));
+                let _ = cargo_error(res);
+            }
         }
     }
+
+    Some(())
 }
