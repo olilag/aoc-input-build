@@ -4,6 +4,17 @@ use std::{fmt::Display, io};
 pub enum Error {
     IO(String, io::Error),
     Request(String, ureq::Error),
+    Date(i8, Box<jiff::Zoned>),
+}
+
+impl Error {
+    pub fn fatal(&self) -> bool {
+        match self {
+            Self::IO(_, _) => true,
+            Self::Request(_, _) => true,
+            Self::Date(_, _) => false,
+        }
+    }
 }
 
 impl Display for Error {
@@ -13,6 +24,10 @@ impl Display for Error {
             Self::Request(url, error) => {
                 write!(f, "HTTP error: '{error}' when fetching '{url}'")
             }
+            Self::Date(day, release) => write!(
+                f,
+                "trying to access day {day} input before it is ready on {release}" // TODO: improve date formatting
+            ),
         }
     }
 }
@@ -22,6 +37,7 @@ impl std::error::Error for Error {
         match self {
             Self::IO(_, error) => Some(error),
             Self::Request(_, error) => Some(error),
+            Self::Date(_, _) => None,
         }
     }
 }
@@ -30,7 +46,11 @@ pub fn cargo_error<T>(res: Result<T, Error>) -> Option<T> {
     match res {
         Ok(t) => Some(t),
         Err(e) => {
-            println!("cargo::error={}", e);
+            if e.fatal() {
+                println!("cargo::error={}", e);
+            } else {
+                println!("cargo::warning={}", e);
+            }
             None
         }
     }
