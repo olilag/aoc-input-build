@@ -1,3 +1,24 @@
+//! AoC input build is helper library to download input files for [Advent of Code](https://adventofcode.com).
+//!
+//! Provides single function [`download_inputs`]. This function needs to be called from [build.rs](https://doc.rust-lang.org/cargo/reference/build-scripts.html) build script.
+//! It will download all necessary input files for given Advent of Code year.
+//!
+//!
+//! ```no_run
+//!# #![allow(clippy::needless_doctest_main)]
+//! use aoc_input_build::download_inputs;
+//!
+//! fn main() {
+//!     let root_dir = env!("CARGO_MANIFEST_DIR"); // root of the project, should always be set to CARGO_MANIFEST_DIR env var
+//!     let token = env!("AOC_TOKEN"); // session cookie from https://adventofcode.com/
+//!     let year = 2025; // which year of Advent of Code to use
+//!     download_inputs(root_dir, token, year);
+//! }
+//! ```
+//!
+//! This snippet should be placed inside `build.rs`. It will download input file for each `dayXX.rs` inside `root_dir/src/` to `root_dir/input/dayXX.txt`.
+//! If the input file already exists, it does not re-download it.
+
 use std::{collections::HashSet, fs, path::PathBuf, sync::LazyLock};
 
 use jiff::{Zoned, civil};
@@ -82,6 +103,20 @@ fn validate_day(year: i16, day: i8) -> bool {
     }
 }
 
+/// Downloads input files for `year`'s Advent of Code. Should be called from `build.rs` build script.
+///
+/// `root_dir` should be set to `env!("CARGO_MANIFEST_DIR")`, this directory is used as parent for `input/` folder and for reading `src/`.
+///
+/// Downloaded input files will be placed to `root_dir/input` and called `dayXX.txt` where `XX` is day's number.
+///
+/// `token` is AoC's cookie called `session`. You can find it in your browser.
+///
+/// When `year` is smaller than 2015 or greater than current year, build script will report an error as AoC for that year doesn't exist.
+///
+/// To download a day, there needs to exist file `root_dir/dayXX.rs` where `XX` is day's number.
+/// If the input file is not yet released or the file for the day does not exist, it will issue a warning and continue.
+///
+/// It will also report any IO or network errors that occurred while fetching and saving input files.
 pub fn download_inputs(root_dir: &str, token: &str, year: i16) -> Option<()> {
     const DOWNLOAD_DIR_NAME: &str = "input";
 
