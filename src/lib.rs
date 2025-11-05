@@ -6,8 +6,8 @@ use crate::error::{Error, cargo_error};
 
 const DOWNLOAD_DIR_NAME: &str = "input";
 const AOC_URL: &str = "https://adventofcode.com";
-// FIXME: add github url
-const AOC_USER_AGENT: &str = "input downloader by oliver.oli.lago@gmail.com";
+const AOC_USER_AGENT: &str =
+    "https://github.com/olilag/aoc-input-build by oliver.oli.lago@gmail.com";
 
 mod error;
 

@@ -2,6 +2,13 @@
 name = "aoc-input-build"
 version = "0.1.0"
 edition = "2024"
+authors = ["Gwen Lago <oliver.oli.lago.@gmail.com>"]
+description = "AoC helper that automatically downloads inputs. For use as a build dependency."
+license = "MIT"
+repository = "https://github.com/olilag/aoc-input-build"
+keywords = ["aoc", "adventofcode", "build-dependencies", "helper", "toolbox"]
+categories = ["development-tools::build-utils"]
+readme = "README.md"
 
 [dependencies]
 regex = "1.12.2"
