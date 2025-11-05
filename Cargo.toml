@@ -9,6 +9,7 @@ repository = "https://github.com/olilag/aoc-input-build"
 keywords = ["aoc", "adventofcode", "build-dependencies", "helper", "toolbox"]
 categories = ["development-tools::build-utils"]
 readme = "README.md"
+rust-version = "1.85"
 
 [dependencies]
 regex = "1.12.2"
