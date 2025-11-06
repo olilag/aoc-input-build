@@ -13,7 +13,10 @@ readme = "README.md"
 rust-version = "1.85"
 
 [dependencies]
-icu = "2.1.1"
+icu_calendar = "2.1.1"
+icu_datetime = "2.1.1"
+icu_locale = "2.1.1"
+icu_time = "2.1.1"
 jiff = "0.2.15"
 jiff-icu = "0.2.0"
 locale_config = "0.3.0"

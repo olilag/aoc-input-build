@@ -1,14 +1,11 @@
 use std::{fmt::Display, io, sync::LazyLock};
 
-use icu::{
-    calendar::Iso,
-    datetime::{
-        DateTimeFormatter,
-        fieldsets::{self, YMDT},
-    },
-    locale,
-    time::ZonedDateTime,
+use icu_calendar::Iso;
+use icu_datetime::{
+    DateTimeFormatter,
+    fieldsets::{self, YMDT},
 };
+use icu_time::ZonedDateTime;
 use jiff::tz::TimeZone;
 use jiff_icu::ConvertFrom as _;
 use locale_config::Locale;
@@ -31,7 +28,7 @@ impl Error {
 }
 
 fn localized_formatter() -> DateTimeFormatter<YMDT> {
-    static LOCALE: LazyLock<locale::Locale> = LazyLock::new(|| {
+    static LOCALE: LazyLock<icu_locale::Locale> = LazyLock::new(|| {
         Locale::current()
             .tags_for("time")
             .next()
