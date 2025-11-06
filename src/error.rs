@@ -1,4 +1,17 @@
-use std::{fmt::Display, io};
+use std::{fmt::Display, io, sync::LazyLock};
+
+use icu::{
+    calendar::Iso,
+    datetime::{
+        DateTimeFormatter,
+        fieldsets::{self, YMDT},
+    },
+    locale,
+    time::ZonedDateTime,
+};
+use jiff::tz::TimeZone;
+use jiff_icu::ConvertFrom as _;
+use locale_config::Locale;
 
 #[derive(Debug)]
 pub enum Error {
@@ -17,6 +30,20 @@ impl Error {
     }
 }
 
+fn localized_formatter() -> DateTimeFormatter<YMDT> {
+    static LOCALE: LazyLock<locale::Locale> = LazyLock::new(|| {
+        Locale::current()
+            .tags_for("time")
+            .next()
+            .map_or_else(|| "en-US".to_string(), |l| l.as_ref().to_owned())
+            .parse()
+            .expect("Failed to parse locale")
+    });
+
+    DateTimeFormatter::try_new((&*LOCALE).into(), fieldsets::YMDT::short())
+        .expect("Failed to construct date time formatter")
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -24,10 +51,18 @@ impl Display for Error {
             Self::Request(url, error) => {
                 write!(f, "HTTP error: '{error}' when fetching '{url}'")
             }
-            Self::Date(day, release) => write!(
-                f,
-                "trying to access day {day} input before it is ready on {release}" // TODO: improve date formatting
-            ),
+            Self::Date(day, release) => {
+                let local_tz = TimeZone::system();
+                let icu_zdt =
+                    ZonedDateTime::<Iso, _>::convert_from(&release.with_time_zone(local_tz));
+                let formatter = localized_formatter();
+
+                write!(
+                    f,
+                    "trying to access day {day} input before it is ready on {}",
+                    formatter.format(&icu_zdt)
+                )
+            }
         }
     }
 }
