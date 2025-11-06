@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "aoc-input-build"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "icu_calendar",
  "icu_datetime",
