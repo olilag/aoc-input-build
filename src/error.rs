@@ -5,9 +5,9 @@ use icu_datetime::{
     DateTimeFormatter,
     fieldsets::{self, YMDT},
 };
-use icu_time::ZonedDateTime;
+use icu_time::{TimeZoneInfo, ZonedDateTime, zone::models::AtTime};
 use jiff::tz::TimeZone;
-use jiff_icu::ConvertFrom as _;
+use jiff_icu::ConvertFrom;
 use locale_config::Locale;
 
 #[derive(Debug)]
@@ -50,8 +50,9 @@ impl Display for Error {
             }
             Self::Date(day, release) => {
                 let local_tz = TimeZone::system();
-                let icu_zdt =
-                    ZonedDateTime::<Iso, _>::convert_from(&release.with_time_zone(local_tz));
+                let icu_zdt = ZonedDateTime::<Iso, TimeZoneInfo<AtTime>>::convert_from(
+                    &release.with_time_zone(local_tz),
+                );
                 let formatter = localized_formatter();
 
                 write!(
