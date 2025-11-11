@@ -1,6 +1,6 @@
 [package]
 name = "aoc-input-build"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 authors = ["Gwen Lago <oliver.oli.lago.@gmail.com>"]
 description = "AoC helper that automatically downloads inputs. For use as a build dependency."
